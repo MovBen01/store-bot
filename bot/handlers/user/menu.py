@@ -1,7 +1,8 @@
 import logging
 import aiosqlite
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import CommandStart
 
 from bot.db.repository import upsert_user, get_categories, get_products, get_product
@@ -10,15 +11,10 @@ from bot.keyboards import (
 )
 from bot.services.pricing import format_price
 from bot.db.repository import get_setting
-from config import DB_PATH
+from config import DB_PATH, WEBAPP_URL
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-MAIN_TEXT = (
-    "🍎 <b>Apple Store Bot</b>\n\n"
-    "Добро пожаловать! Выберите раздел:"
-)
 
 SUPPORT_TEXT = (
     "💬 <b>Поддержка</b>\n\n"
@@ -39,6 +35,23 @@ FAQ_TEXT = (
 )
 
 
+def kb_start(webapp_url: str) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    if webapp_url:
+        b.row(InlineKeyboardButton(
+            text="🛍 Открыть магазин",
+            web_app=WebAppInfo(url=webapp_url)
+        ))
+    b.row(InlineKeyboardButton(text="📦 Мои заказы", callback_data="my_orders"))
+    b.row(
+        InlineKeyboardButton(text="💬 Поддержка", callback_data="support"),
+        InlineKeyboardButton(text="❓ FAQ", callback_data="faq")
+    )
+    if not webapp_url:
+        b.row(InlineKeyboardButton(text="🛍 Каталог (текст)", callback_data="catalog"))
+    return b.as_markup()
+
+
 async def calc_price(base_price: float) -> float:
     mode = await get_setting("markup_mode") or "percent"
     value = float(await get_setting("markup_value") or "0")
@@ -50,12 +63,19 @@ async def calc_price(base_price: float) -> float:
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await upsert_user(message.from_user.id, message.from_user.username or "", message.from_user.full_name)
-    await message.answer(MAIN_TEXT, reply_markup=kb_main_menu(), parse_mode="HTML")
+    text = (
+        f"🍎 <b>Apple Store</b>\n\n"
+        f"Привет, {message.from_user.first_name}!\n"
+        f"Добро пожаловать в магазин Apple-техники.\n\n"
+        f"Нажмите кнопку ниже, чтобы открыть магазин 👇"
+    )
+    await message.answer(text, reply_markup=kb_start(WEBAPP_URL), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "main_menu")
 async def cb_main_menu(cb: CallbackQuery):
-    await cb.message.edit_text(MAIN_TEXT, reply_markup=kb_main_menu(), parse_mode="HTML")
+    text = "🍎 <b>Apple Store</b>\n\nВыберите раздел:"
+    await cb.message.edit_text(text, reply_markup=kb_start(WEBAPP_URL), parse_mode="HTML")
     await cb.answer()
 
 

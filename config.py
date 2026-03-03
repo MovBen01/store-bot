@@ -9,6 +9,7 @@ PRICE_PROVIDER: str = os.getenv("PRICE_PROVIDER", "mock")
 MARKUP_MODE: str = os.getenv("MARKUP_MODE", "percent")
 MARKUP_VALUE: float = float(os.getenv("MARKUP_VALUE", "10"))
 DB_PATH: str = os.getenv("DB_PATH", "shop.db")
+WEBAPP_URL: str = os.getenv("WEBAPP_URL", "")
 
 USERBOT_API_ID: str = os.getenv("USERBOT_API_ID", "")
 USERBOT_API_HASH: str = os.getenv("USERBOT_API_HASH", "")
