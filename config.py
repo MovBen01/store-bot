@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-<<<<<<< HEAD
 BOT_TOKEN: str = os.environ["BOT_TOKEN"]
 ADMIN_IDS: list[int] = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 PRICE_PROVIDER: str = os.getenv("PRICE_PROVIDER", "mock")
@@ -36,4 +35,4 @@ STATUSES = {
     "delivered":  "📦 Доставлен",
     "cancelled":  "❌ Отменён",
 }
->>>>>>> a3f6ff9e60154a5b9e6d149779d7bbcc564473b9
+

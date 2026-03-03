@@ -2,12 +2,7 @@
 *.db
 __pycache__/
 *.pyc
-<<<<<<< HEAD
 userbot_session*
 venv/
 *.session
 *.session-journal
-=======
-*.pyo
-.DS_Store
->>>>>>> a3f6ff9e60154a5b9e6d149779d7bbcc564473b9

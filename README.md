@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+HEAD
 # 🍎 Apple Shop Telegram Bot
 
 Telegram-бот "магазин Apple-техники" на aiogram v3.
@@ -192,4 +192,4 @@ store_bot/
 | `/admin` | Панель администратора |
 | `/setphone` | Изменить телефон |
 | `/setaddress` | Изменить адрес |
->>>>>>> a3f6ff9e60154a5b9e6d149779d7bbcc564473b9
+
