@@ -30,4 +30,6 @@ export const adminApi = {
   updateOrderStatus: (id, status) => req('/orders/' + id + '/status', { method: 'PUT', body: JSON.stringify({ status }) }),
   getSettings: () => req('/settings'),
   updateSettings: (data) => req('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  getDesign: () => req('/design'),
+  updateDesign: (data) => req('/design', { method: 'PUT', body: JSON.stringify(data) }),
 }
