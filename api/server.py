@@ -275,9 +275,15 @@ async def adm_upd_settings(body: SettingsBody, x_admin_token: str = Header(defau
 # DESIGN API  /admin-api/design
 # ══════════════════════════════════════════════════════════════
 DESIGN_KEYS = [
-    "design_accent_color", "design_bg_color", "design_store_name",
-    "design_hero_title", "design_hero_subtitle", "design_support_text",
-    "design_show_hero",
+    "design_store_name","design_store_emoji","design_support_text",
+    "design_accent_color","design_bg_color","design_card_color","design_text_color",
+    "design_button_radius","design_card_radius",
+    "design_show_hero","design_hero_title","design_hero_subtitle","design_hero_label",
+    "design_hero_btn_text","design_hero_image","design_hero_gradient",
+    "design_show_banner2","design_banner2_title","design_banner2_subtitle",
+    "design_banner2_image","design_banner2_btn_text","design_banner2_gradient",
+    "design_show_search","design_show_categories","design_show_hit_badge",
+    "design_show_footer","design_footer_text",
 ]
 
 @app.get("/admin-api/design")
@@ -289,13 +295,33 @@ async def adm_get_design(x_admin_token: str = Header(default="")):
             return {r["key"]: r["value"] for r in await c.fetchall()}
 
 class DesignBody(BaseModel):
+    design_store_name: str = "Apple Store"
+    design_store_emoji: str = "🍎"
+    design_support_text: str = "По всем вопросам: @support_username"
     design_accent_color: str = "#f97316"
     design_bg_color: str = "#0a0a0a"
-    design_store_name: str = "Apple Store"
-    design_hero_title: str = "iPhone 16 Pro"
-    design_hero_subtitle: str = "Титановый корпус. Чип A18 Pro."
-    design_support_text: str = "По всем вопросам: @support_username"
+    design_card_color: str = "#161616"
+    design_text_color: str = "#f5f5f7"
+    design_button_radius: str = "50"
+    design_card_radius: str = "16"
     design_show_hero: str = "1"
+    design_hero_title: str = "iPhone 16 Pro\nУже в наличии"
+    design_hero_subtitle: str = "Титановый корпус. Чип A18 Pro."
+    design_hero_label: str = "НОВИНКИ 2025"
+    design_hero_btn_text: str = "Смотреть →"
+    design_hero_image: str = ""
+    design_hero_gradient: str = "linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)"
+    design_show_banner2: str = "0"
+    design_banner2_title: str = "Специальное предложение"
+    design_banner2_subtitle: str = "Скидки до 30% на аксессуары"
+    design_banner2_image: str = ""
+    design_banner2_btn_text: str = "Подробнее"
+    design_banner2_gradient: str = "linear-gradient(135deg,#0f3460,#533483)"
+    design_show_search: str = "1"
+    design_show_categories: str = "1"
+    design_show_hit_badge: str = "1"
+    design_show_footer: str = "1"
+    design_footer_text: str = "Официальный дилер Apple. Гарантия 1 год."
 
 @app.put("/admin-api/design")
 async def adm_upd_design(body: DesignBody, x_admin_token: str = Header(default="")):
