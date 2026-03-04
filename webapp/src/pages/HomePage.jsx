@@ -13,31 +13,14 @@ const EMOJI = (name) => {
 
 function fmt(n) { return Number(n).toLocaleString('ru-RU') + ' ₽' }
 
-function applyDesign(d) {
-  if (!d) return
-  const r = document.documentElement.style
-  if (d.design_accent_color) r.setProperty('--accent2', d.design_accent_color)
-  if (d.design_bg_color)     r.setProperty('--bg', d.design_bg_color)
-  if (d.design_card_color)   r.setProperty('--card', d.design_card_color)
-  if (d.design_text_color)   r.setProperty('--text', d.design_text_color)
-  if (d.design_button_radius) r.setProperty('--btn-radius', d.design_button_radius + 'px')
-  if (d.design_card_radius)   r.setProperty('--radius', d.design_card_radius + 'px')
-}
-
-export default function HomePage({ go, cart }) {
+export default function HomePage({ go, cart, design = {} }) {
   const [cats, setCats] = useState([])
   const [products, setProducts] = useState([])
   const [activeCat, setActiveCat] = useState(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [design, setDesign] = useState({})
 
-  useEffect(() => {
-    Promise.all([
-      api.getCategories().then(setCats),
-      fetch('/api/design').then(r => r.json()).then(d => { setDesign(d); applyDesign(d) }).catch(() => {})
-    ])
-  }, [])
+  useEffect(() => { api.getCategories().then(setCats) }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -46,16 +29,16 @@ export default function HomePage({ go, cart }) {
   }, [activeCat, search])
 
   const D = design
-  const storeName   = D.design_store_name    || 'Apple Store'
-  const storeEmoji  = D.design_store_emoji   || '🍎'
-  const showHero    = D.design_show_hero     !== '0'
-  const showBanner2 = D.design_show_banner2  === '1'
-  const showSearch  = D.design_show_search   !== '0'
-  const showCats    = D.design_show_categories !== '0'
-  const showHitBadge= D.design_show_hit_badge !== '0'
-  const showFooter  = D.design_show_footer   !== '0'
-  const accentColor = D.design_accent_color  || '#f97316'
-  const btnRadius   = (D.design_button_radius || '50') + 'px'
+  const storeName    = D.design_store_name      || 'Apple Store'
+  const storeEmoji   = D.design_store_emoji     || '🍎'
+  const showHero     = D.design_show_hero       !== '0'
+  const showBanner2  = D.design_show_banner2    === '1'
+  const showSearch   = D.design_show_search     !== '0'
+  const showCats     = D.design_show_categories !== '0'
+  const showHitBadge = D.design_show_hit_badge  !== '0'
+  const showFooter   = D.design_show_footer     !== '0'
+  const accentColor  = D.design_accent_color    || '#f97316'
+  const btnRadius    = (D.design_button_radius  || '50') + 'px'
 
   return (
     <div className="page">
@@ -91,19 +74,17 @@ export default function HomePage({ go, cart }) {
       {/* Banner 2 */}
       {showBanner2 && !search && !activeCat && (
         <div className="fade-up" style={{
-          margin: '0 16px 12px',
-          borderRadius: 20,
-          padding: '20px',
+          margin: '0 16px 12px', borderRadius: 20, padding: '20px', overflow: 'hidden',
           background: D.design_banner2_image
             ? `url(${D.design_banner2_image}) center/cover`
             : (D.design_banner2_gradient || 'linear-gradient(135deg,#0f3460,#533483)'),
-          position: 'relative', overflow: 'hidden'
+          position: 'relative'
         }}>
           {D.design_banner2_image && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />}
           <div style={{ position: 'relative' }}>
             <div style={{ fontFamily: 'var(--font)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{D.design_banner2_title}</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 14 }}>{D.design_banner2_subtitle}</div>
-            <button className="hero-btn" style={{ borderRadius: btnRadius }} onClick={() => go('home')}>
+            <button className="hero-btn" style={{ borderRadius: btnRadius }}>
               {D.design_banner2_btn_text || 'Подробнее'}
             </button>
           </div>
@@ -158,7 +139,7 @@ export default function HomePage({ go, cart }) {
                 <div className="product-img">
                   {p.image_url
                     ? <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }}
-                        onError={e => { e.target.style.display = 'none' }} />
+                        onError={e => e.target.style.display = 'none'} />
                     : EMOJI(p.name)
                   }
                   {showHitBadge && i < 3 && <span className="product-img-badge">ХИТ</span>}
@@ -167,7 +148,7 @@ export default function HomePage({ go, cart }) {
                   <div className="product-name">{p.name}</div>
                   <div className="product-price">{fmt(p.display_price)}</div>
                   <button className="product-add"
-                    style={{ borderRadius: '50%', background: cart.inCart(p.id) ? 'var(--green)' : accentColor }}
+                    style={{ background: cart.inCart(p.id) ? 'var(--green)' : accentColor }}
                     onClick={e => { e.stopPropagation(); cart.add(p) }}>
                     {cart.inCart(p.id) ? '✓' : '+'}
                   </button>
@@ -178,10 +159,9 @@ export default function HomePage({ go, cart }) {
         )}
       </div>
 
-      {/* Footer */}
       {showFooter && (
         <div style={{ textAlign: 'center', padding: '20px 16px', color: 'var(--text3)', fontSize: 12, borderTop: '1px solid var(--border)', marginTop: 16 }}>
-          {D.design_footer_text || ''}
+          {D.design_footer_text}
         </div>
       )}
     </div>
