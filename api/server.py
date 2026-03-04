@@ -165,13 +165,12 @@ webapp_dist = Path(__file__).parent.parent / "webapp" / "dist"
 if webapp_dist.exists():
     app.mount("/assets", StaticFiles(directory=webapp_dist / "assets"), name="assets")
 
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(webapp_dist / "index.html")
-
-    @app.get("/{path:path}")
-    async def serve_app(path: str):
-        return FileResponse(webapp_dist / "index.html")
+@app.get("/")
+async def serve_index():
+    index = Path(__file__).parent.parent / "webapp" / "dist" / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return {"status": "API running"}
 
 
 # ════════════════════════════════════════════════
@@ -337,16 +336,17 @@ admin_dist = Path(__file__).parent.parent / "webapp_admin" / "dist"
 if admin_dist.exists():
     app.mount("/admin-assets", StaticFiles(directory=admin_dist / "assets"), name="admin-assets")
 
-@app.get("/admin")
-async def serve_admin():
-    index = Path(__file__).parent.parent / "webapp_admin" / "dist" / "index.html"
+# ─── SMART CATCH-ALL (must be LAST) ──────────────────────────
+@app.get("/{path:path}")
+async def catch_all(path: str):
+    # Admin routes
+    if path.startswith("admin"):
+        index = Path(__file__).parent.parent / "webapp_admin" / "dist" / "index.html"
+        if index.exists():
+            return FileResponse(index)
+        return {"error": "Admin build not found. Run: cd webapp_admin && npm run build"}
+    # Main webapp
+    index = Path(__file__).parent.parent / "webapp" / "dist" / "index.html"
     if index.exists():
         return FileResponse(index)
-    return {"error": "Admin build not found. Run: cd webapp_admin && npm run build"}
-
-@app.get("/admin/{path:path}")
-async def serve_admin_app(path: str):
-    index = Path(__file__).parent.parent / "webapp_admin" / "dist" / "index.html"
-    if index.exists():
-        return FileResponse(index)
-    return {"error": "Admin build not found"}
+    return {"status": "API running, webapp not built"}
