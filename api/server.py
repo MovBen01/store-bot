@@ -196,7 +196,7 @@ async def adm_del_cat(cat_id: int, x_admin_token: str = Header(default="")):
     return {"ok":True}
 
 class ProdBody(BaseModel):
-    name: str; sku: str = ""; description: str = ""; base_price: float; category_id: int; visible: int = 1; image_url: str = ""
+    name: str; sku: str = ""; description: str = ""; base_price: float; category_id: int; visible: int = 1; image_url: str = ""; specs: str = "[]"
 
 @app.get("/admin-api/products")
 async def adm_prods(x_admin_token: str = Header(default="")):
@@ -212,7 +212,7 @@ async def adm_create_prod(body: ProdBody, x_admin_token: str = Header(default=""
     import time
     sku = body.sku or body.name.lower().replace(" ","-")[:30]+"-"+str(int(time.time()))
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("INSERT INTO products(name,sku,description,base_price,category_id,visible,image_url) VALUES(?,?,?,?,?,?,?)",(body.name,sku,body.description,body.base_price,body.category_id,body.visible,body.image_url))
+        await db.execute("INSERT INTO products(name,sku,description,base_price,category_id,visible,image_url,specs) VALUES(?,?,?,?,?,?,?,?)",(body.name,sku,body.description,body.base_price,body.category_id,body.visible,body.image_url,body.specs))
         await db.commit()
     return {"ok":True}
 
@@ -220,7 +220,7 @@ async def adm_create_prod(body: ProdBody, x_admin_token: str = Header(default=""
 async def adm_upd_prod(prod_id: int, body: ProdBody, x_admin_token: str = Header(default="")):
     _auth(x_admin_token)
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE products SET name=?,description=?,base_price=?,category_id=?,visible=?,image_url=? WHERE id=?",(body.name,body.description,body.base_price,body.category_id,body.visible,body.image_url,prod_id))
+        await db.execute("UPDATE products SET name=?,description=?,base_price=?,category_id=?,visible=?,image_url=?,specs=? WHERE id=?",(body.name,body.description,body.base_price,body.category_id,body.visible,body.image_url,body.specs,prod_id))
         await db.commit()
     return {"ok":True}
 

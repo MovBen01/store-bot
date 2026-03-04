@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT DEFAULT '',
     base_price REAL DEFAULT 0,
     visible INTEGER DEFAULT 1,
-    image_url TEXT DEFAULT ''
+    image_url TEXT DEFAULT '',
+    specs TEXT DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -93,6 +94,7 @@ async def init_db():
         for sql in [
             "ALTER TABLE categories ADD COLUMN image_url TEXT DEFAULT ''",
             "ALTER TABLE products ADD COLUMN image_url TEXT DEFAULT ''",
+            "ALTER TABLE products ADD COLUMN specs TEXT DEFAULT '[]'",
         ]:
             try:
                 await db.execute(sql)
