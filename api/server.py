@@ -162,7 +162,7 @@ async def admin_stats(x_admin_token: str = Header(default="")):
     return {"orders_total":total,"orders_new":new_,"revenue":rev,"products_count":prods,"recent_orders":recent}
 
 class CatBody(BaseModel):
-    name: str; emoji: str = "📦"; sort_order: int = 0; visible: int = 1
+    name: str; emoji: str = "📦"; sort_order: int = 0; visible: int = 1; image_url: str = ""
 
 @app.get("/admin-api/categories")
 async def adm_cats(x_admin_token: str = Header(default="")):
@@ -176,7 +176,7 @@ async def adm_cats(x_admin_token: str = Header(default="")):
 async def adm_create_cat(body: CatBody, x_admin_token: str = Header(default="")):
     _auth(x_admin_token)
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("INSERT INTO categories(name,emoji,sort_order,visible) VALUES(?,?,?,?)",(body.name,body.emoji,body.sort_order,body.visible))
+        await db.execute("INSERT INTO categories(name,emoji,sort_order,visible,image_url) VALUES(?,?,?,?,?)",(body.name,body.emoji,body.sort_order,body.visible,body.image_url))
         await db.commit()
     return {"ok":True}
 
@@ -184,7 +184,7 @@ async def adm_create_cat(body: CatBody, x_admin_token: str = Header(default=""))
 async def adm_upd_cat(cat_id: int, body: CatBody, x_admin_token: str = Header(default="")):
     _auth(x_admin_token)
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE categories SET name=?,emoji=?,sort_order=?,visible=? WHERE id=?",(body.name,body.emoji,body.sort_order,body.visible,cat_id))
+        await db.execute("UPDATE categories SET name=?,emoji=?,sort_order=?,visible=?,image_url=? WHERE id=?",(body.name,body.emoji,body.sort_order,body.visible,body.image_url,cat_id))
         await db.commit()
     return {"ok":True}
 
@@ -196,7 +196,7 @@ async def adm_del_cat(cat_id: int, x_admin_token: str = Header(default="")):
     return {"ok":True}
 
 class ProdBody(BaseModel):
-    name: str; sku: str = ""; description: str = ""; base_price: float; category_id: int; visible: int = 1
+    name: str; sku: str = ""; description: str = ""; base_price: float; category_id: int; visible: int = 1; image_url: str = ""
 
 @app.get("/admin-api/products")
 async def adm_prods(x_admin_token: str = Header(default="")):
@@ -212,7 +212,7 @@ async def adm_create_prod(body: ProdBody, x_admin_token: str = Header(default=""
     import time
     sku = body.sku or body.name.lower().replace(" ","-")[:30]+"-"+str(int(time.time()))
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("INSERT INTO products(name,sku,description,base_price,category_id,visible) VALUES(?,?,?,?,?,?)",(body.name,sku,body.description,body.base_price,body.category_id,body.visible))
+        await db.execute("INSERT INTO products(name,sku,description,base_price,category_id,visible,image_url) VALUES(?,?,?,?,?,?,?)",(body.name,sku,body.description,body.base_price,body.category_id,body.visible,body.image_url))
         await db.commit()
     return {"ok":True}
 
@@ -220,7 +220,7 @@ async def adm_create_prod(body: ProdBody, x_admin_token: str = Header(default=""
 async def adm_upd_prod(prod_id: int, body: ProdBody, x_admin_token: str = Header(default="")):
     _auth(x_admin_token)
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE products SET name=?,description=?,base_price=?,category_id=?,visible=? WHERE id=?",(body.name,body.description,body.base_price,body.category_id,body.visible,prod_id))
+        await db.execute("UPDATE products SET name=?,description=?,base_price=?,category_id=?,visible=?,image_url=? WHERE id=?",(body.name,body.description,body.base_price,body.category_id,body.visible,body.image_url,prod_id))
         await db.commit()
     return {"ok":True}
 
@@ -269,6 +269,51 @@ async def adm_upd_settings(body: SettingsBody, x_admin_token: str = Header(defau
         await db.commit()
     return {"ok":True}
 
+
+
+# ══════════════════════════════════════════════════════════════
+# DESIGN API  /admin-api/design
+# ══════════════════════════════════════════════════════════════
+DESIGN_KEYS = [
+    "design_accent_color", "design_bg_color", "design_store_name",
+    "design_hero_title", "design_hero_subtitle", "design_support_text",
+    "design_show_hero",
+]
+
+@app.get("/admin-api/design")
+async def adm_get_design(x_admin_token: str = Header(default="")):
+    _auth(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT key,value FROM settings WHERE key LIKE 'design_%'") as c:
+            return {r["key"]: r["value"] for r in await c.fetchall()}
+
+class DesignBody(BaseModel):
+    design_accent_color: str = "#f97316"
+    design_bg_color: str = "#0a0a0a"
+    design_store_name: str = "Apple Store"
+    design_hero_title: str = "iPhone 16 Pro"
+    design_hero_subtitle: str = "Титановый корпус. Чип A18 Pro."
+    design_support_text: str = "По всем вопросам: @support_username"
+    design_show_hero: str = "1"
+
+@app.put("/admin-api/design")
+async def adm_upd_design(body: DesignBody, x_admin_token: str = Header(default="")):
+    _auth(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        for key in DESIGN_KEYS:
+            val = getattr(body, key, "")
+            await db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (key, val))
+        await db.commit()
+    return {"ok": True}
+
+# Public design endpoint (no auth — webapp needs it)
+@app.get("/api/design")
+async def get_design():
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT key,value FROM settings WHERE key LIKE 'design_%'") as c:
+            return {r["key"]: r["value"] for r in await c.fetchall()}
 
 # ══════════════════════════════════════════════════════════════
 # HTML PAGES  (must come AFTER all API routes)

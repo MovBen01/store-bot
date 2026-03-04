@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS categories (
     name TEXT NOT NULL,
     emoji TEXT DEFAULT '',
     visible INTEGER DEFAULT 1,
-    sort_order INTEGER DEFAULT 0
+    sort_order INTEGER DEFAULT 0,
+    image_url TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -24,7 +25,8 @@ CREATE TABLE IF NOT EXISTS products (
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     base_price REAL DEFAULT 0,
-    visible INTEGER DEFAULT 1
+    visible INTEGER DEFAULT 1,
+    image_url TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -62,6 +64,14 @@ INSERT OR IGNORE INTO categories(id, name, emoji, sort_order) VALUES(2, 'MacBook
 INSERT OR IGNORE INTO categories(id, name, emoji, sort_order) VALUES(3, 'iPad', '🗂', 3);
 INSERT OR IGNORE INTO categories(id, name, emoji, sort_order) VALUES(4, 'AirPods', '🎧', 4);
 INSERT OR IGNORE INTO categories(id, name, emoji, sort_order) VALUES(5, 'Apple Watch', '⌚', 5);
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_accent_color', '#f97316');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_bg_color', '#0a0a0a');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_store_name', 'Apple Store');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_hero_title', 'iPhone 16 Pro\nУже в наличии');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_hero_subtitle', 'Титановый корпус. Чип A18 Pro.');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_support_text', 'По всем вопросам: @support_username');
+INSERT OR IGNORE INTO settings(key, value) VALUES('design_show_hero', '1');
+
 INSERT OR IGNORE INTO products(category_id, sku, name, description, base_price) VALUES
   (1, 'iphone16-128', 'iPhone 16 128GB', 'Новейший iPhone 16, 128 ГБ, различные цвета', 89990),
   (1, 'iphone16-256', 'iPhone 16 256GB', 'Новейший iPhone 16, 256 ГБ, различные цвета', 99990),
@@ -79,4 +89,13 @@ async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(CREATE_TABLES)
         await db.executescript(SEED_DATA)
+        # Safe migrations for existing DBs
+        for sql in [
+            "ALTER TABLE categories ADD COLUMN image_url TEXT DEFAULT ''",
+            "ALTER TABLE products ADD COLUMN image_url TEXT DEFAULT ''",
+        ]:
+            try:
+                await db.execute(sql)
+            except Exception:
+                pass  # Column already exists
         await db.commit()
