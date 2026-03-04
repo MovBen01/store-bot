@@ -337,10 +337,16 @@ admin_dist = Path(__file__).parent.parent / "webapp_admin" / "dist"
 if admin_dist.exists():
     app.mount("/admin-assets", StaticFiles(directory=admin_dist / "assets"), name="admin-assets")
 
-    @app.get("/admin")
-    async def serve_admin():
-        return FileResponse(admin_dist / "index.html")
+@app.get("/admin")
+async def serve_admin():
+    index = Path(__file__).parent.parent / "webapp_admin" / "dist" / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return {"error": "Admin build not found. Run: cd webapp_admin && npm run build"}
 
-    @app.get("/admin/{path:path}")
-    async def serve_admin_app(path: str):
-        return FileResponse(admin_dist / "index.html")
+@app.get("/admin/{path:path}")
+async def serve_admin_app(path: str):
+    index = Path(__file__).parent.parent / "webapp_admin" / "dist" / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return {"error": "Admin build not found"}
