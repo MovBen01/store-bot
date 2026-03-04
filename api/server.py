@@ -1,3 +1,4 @@
+import os
 """
 FastAPI server — REST API для WebApp.
 Запускается вместе с ботом или отдельно.
@@ -171,3 +172,175 @@ if webapp_dist.exists():
     @app.get("/{path:path}")
     async def serve_app(path: str):
         return FileResponse(webapp_dist / "index.html")
+
+
+# ════════════════════════════════════════════════
+# ADMIN API  (защищено токеном)
+# ════════════════════════════════════════════════
+import hashlib, secrets
+from fastapi import Header, HTTPException as FastHTTPException
+from pydantic import BaseModel as BM
+
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "changeme123")
+_sessions: set[str] = set()
+
+def _check(x_admin_token: str = Header(default="")):
+    if x_admin_token not in _sessions:
+        raise FastHTTPException(status_code=401, detail="Unauthorized")
+
+class LoginReq(BM):
+    password: str
+
+@app.post("/admin-api/login")
+async def admin_login(req: LoginReq):
+    if req.password != ADMIN_SECRET:
+        raise FastHTTPException(status_code=401, detail="Wrong password")
+    token = secrets.token_hex(32)
+    _sessions.add(token)
+    return {"token": token}
+
+@app.get("/admin-api/stats")
+async def admin_stats(x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT COUNT(*) as n FROM orders") as c: total = (await c.fetchone())["n"]
+        async with db.execute("SELECT COUNT(*) as n FROM orders WHERE status='new'") as c: new_ = (await c.fetchone())["n"]
+        async with db.execute("SELECT COALESCE(SUM(price),0) as s FROM orders WHERE status='done'") as c: rev = (await c.fetchone())["s"]
+        async with db.execute("SELECT COUNT(*) as n FROM products WHERE visible=1") as c: prods = (await c.fetchone())["n"]
+        async with db.execute("SELECT * FROM orders ORDER BY created_at DESC LIMIT 10") as c: recent = [dict(r) for r in await c.fetchall()]
+    return {"orders_total": total, "orders_new": new_, "revenue": rev, "products_count": prods, "recent_orders": recent}
+
+# --- Categories ---
+class CatBody(BM):
+    name: str; emoji: str = "📦"; sort_order: int = 0; visible: int = 1
+
+@app.get("/admin-api/categories")
+async def adm_get_cats(x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM categories ORDER BY sort_order") as c:
+            return [dict(r) for r in await c.fetchall()]
+
+@app.post("/admin-api/categories")
+async def adm_create_cat(body: CatBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT INTO categories(name,emoji,sort_order,visible) VALUES(?,?,?,?)",
+            (body.name, body.emoji, body.sort_order, body.visible))
+        await db.commit()
+    return {"ok": True}
+
+@app.put("/admin-api/categories/{cat_id}")
+async def adm_update_cat(cat_id: int, body: CatBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE categories SET name=?,emoji=?,sort_order=?,visible=? WHERE id=?",
+            (body.name, body.emoji, body.sort_order, body.visible, cat_id))
+        await db.commit()
+    return {"ok": True}
+
+@app.delete("/admin-api/categories/{cat_id}")
+async def adm_del_cat(cat_id: int, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM categories WHERE id=?", (cat_id,))
+        await db.commit()
+    return {"ok": True}
+
+# --- Products ---
+class ProdBody(BM):
+    name: str; sku: str = ""; description: str = ""
+    base_price: float; category_id: int; visible: int = 1
+
+@app.get("/admin-api/products")
+async def adm_get_prods(x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT p.*, c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id=c.id ORDER BY c.sort_order, p.id") as c:
+            return [dict(r) for r in await c.fetchall()]
+
+@app.post("/admin-api/products")
+async def adm_create_prod(body: ProdBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    sku = body.sku or body.name.lower().replace(" ","-")[:30] + "-" + str(int(__import__("time").time()))
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT INTO products(name,sku,description,base_price,category_id,visible) VALUES(?,?,?,?,?,?)",
+            (body.name, sku, body.description, body.base_price, body.category_id, body.visible))
+        await db.commit()
+    return {"ok": True}
+
+@app.put("/admin-api/products/{prod_id}")
+async def adm_update_prod(prod_id: int, body: ProdBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE products SET name=?,description=?,base_price=?,category_id=?,visible=? WHERE id=?",
+            (body.name, body.description, body.base_price, body.category_id, body.visible, prod_id))
+        await db.commit()
+    return {"ok": True}
+
+@app.delete("/admin-api/products/{prod_id}")
+async def adm_del_prod(prod_id: int, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM products WHERE id=?", (prod_id,))
+        await db.commit()
+    return {"ok": True}
+
+# --- Orders ---
+class StatusBody(BM):
+    status: str
+
+@app.get("/admin-api/orders")
+async def adm_get_orders(x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM orders ORDER BY created_at DESC LIMIT 100") as c:
+            return [dict(r) for r in await c.fetchall()]
+
+@app.put("/admin-api/orders/{order_id}/status")
+async def adm_order_status(order_id: int, body: StatusBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE orders SET status=? WHERE id=?", (body.status, order_id))
+        await db.commit()
+    return {"ok": True}
+
+# --- Settings ---
+@app.get("/admin-api/settings")
+async def adm_get_settings(x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT key, value FROM settings") as c:
+            rows = await c.fetchall()
+    return {r["key"]: r["value"] for r in rows}
+
+class SettingsBody(BM):
+    markup_mode: str; markup_value: str
+
+@app.put("/admin-api/settings")
+async def adm_update_settings(body: SettingsBody, x_admin_token: str = Header(default="")):
+    _check(x_admin_token)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES('markup_mode',?)", (body.markup_mode,))
+        await db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES('markup_value',?)", (body.markup_value,))
+        await db.commit()
+    return {"ok": True}
+
+
+# ─── SERVE ADMIN BUILD ────────────────────────────────────────
+admin_dist = Path(__file__).parent.parent / "webapp_admin" / "dist"
+if admin_dist.exists():
+    app.mount("/admin-assets", StaticFiles(directory=admin_dist / "assets"), name="admin-assets")
+
+    @app.get("/admin")
+    async def serve_admin():
+        return FileResponse(admin_dist / "index.html")
+
+    @app.get("/admin/{path:path}")
+    async def serve_admin_app(path: str):
+        return FileResponse(admin_dist / "index.html")

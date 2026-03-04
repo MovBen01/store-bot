@@ -15,3 +15,5 @@ USERBOT_API_ID: str = os.getenv("USERBOT_API_ID", "")
 USERBOT_API_HASH: str = os.getenv("USERBOT_API_HASH", "")
 USERBOT_SESSION: str = os.getenv("USERBOT_SESSION", "userbot_session")
 BIGSALE_BOT_USERNAME: str = os.getenv("BIGSALE_BOT_USERNAME", "BigSaleApple")
+
+ADMIN_SECRET: str = os.getenv('ADMIN_SECRET', 'changeme123')
